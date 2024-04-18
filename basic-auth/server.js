@@ -1,46 +1,51 @@
-var express = require('express');
-var morgan = require('morgan');
+import express from 'express';
+import morgan from 'morgan';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-var hostname = 'localhost';
-var port = 3000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-var app = express();
+const hostname = 'localhost';
+const port = 3001;
+
+const app = express();
 
 app.use(morgan('dev'));
 
-function auth (req, res, next) {
+const auth = (req, res, next) => {
     console.log(req.headers);
-    var authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization;
     if (!authHeader) {
-        var err = new Error('You are not authenticated!');
+        const err = new Error('You are not authenticated!');
         err.status = 401;
-        next(err);
-        return;
+        return next(err);
     }
 
-    var auth = new Buffer(authHeader.split(' ')[1], 'base64').toString().split(':');
-    var user = auth[0];
-    var pass = auth[1];
-    if (user == 'admin' && pass == 'password') {
-        next(); // authorized
+    const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+    const user = auth[0];
+    const pass = auth[1];
+    if (user === 'admin' && pass === 'password') {
+        return next(); // authorized
     } else {
-        var err = new Error('You are not authenticated!');
+        const err = new Error('You are not authenticated!');
         err.status = 401;
-        next(err);
+        return next(err);
     }
 }
 
 app.use(auth);
 
-app.use(express.static(__dirname + '/public'));
-app.use(function(err,req,res,next) {
-            res.writeHead(err.status || 500, {
-            'WWW-Authenticate': 'Basic',
-            'Content-Type': 'text/plain'
-        });
-        res.end(err.message);
+app.use(express.static(`${__dirname}/public`));
+
+app.use((err, req, res, next) => {
+    res.writeHead(err.status || 500, {
+        'WWW-Authenticate': 'Basic',
+        'Content-Type': 'text/plain'
+    });
+    res.end(err.message);
 });
 
-app.listen(port, hostname, function(){
-  console.log(`Server running at http://${hostname}:${port}/`);
+app.listen(port, hostname, () => {
+    console.log(`Server running at http://${hostname}:${port}/`);
 });
